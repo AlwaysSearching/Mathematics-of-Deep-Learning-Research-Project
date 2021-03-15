@@ -1,10 +1,10 @@
 import tensorflow as tf
 
 from tensorflow.keras.layers import (
-    Dense, Flatten, Conv2D, MaxPool2D, Softmax, BatchNormalization
+    Dense, Flatten, Conv2D, MaxPool2D, GlobalAveragePooling2D, Softmax, BatchNormalization
 )
 from tensorflow.keras.models import Sequential
-from tensorflow.keras import Model
+from tensorflow.keras.models import Model
 
 
 class MNIST_ResNet(Model):
@@ -22,13 +22,15 @@ class MNIST_ResNet(Model):
                     Output dimension of the final softmax layer.
                 filter_n_0 - int
                     Initial number of filters in the network prior to the Residual block layers.
+                    
+        Note: If the number of filters increases, then in the layer where this occurs we must have that stride is greater than 1.   
         '''
         
         super(MNIST_ResNet, self).__init__()     
         
         self.n_classes = n_classes
         
-        self.conv_1 = Conv2D(filters=filter_n_0, kernel_size=(5, 5), strides=2, padding="same")
+        self.conv_1 = Conv2D(filters=filter_n_0, kernel_size=(5, 5), strides=1, padding="same")
         self.batch_norm_1 = BatchNormalization()
         self.maxpool_1 = MaxPool2D(pool_size=(3, 3), strides=2, padding="same")
         
@@ -40,11 +42,12 @@ class MNIST_ResNet(Model):
                 make_residual_block_layer(**param_dict)
             )
 
-        self.avgpool = tf.keras.layers.GlobalAveragePooling2D()
-        self.softmax = tf.keras.layers.Dense(units=self.n_classes, activation=Softmax)
+        self.avgpool = GlobalAveragePooling2D()
+        self.flatten = Flatten()
+        self.softmax = Dense(units=self.n_classes, activation='softmax')
                 
         
-    def call(self, x, training=None): 
+    def call(self, inputs, training=None): 
         # Training is used for layers which utilize Batch Normalization.
         
         x = self.conv_1(inputs)
@@ -52,11 +55,12 @@ class MNIST_ResNet(Model):
         x = tf.nn.relu(x)
         x = self.maxpool_1(x)
         
-        # Pass through residual blocks
+        # Pass through residual blocks.
         for residual_block in self.residual_blocks:
-            x = self.layer1(x, training=training)
+            x = residual_block(x, training=training)
             
         x = self.avgpool(x)
+        x = self.flatten(x)
         output = self.softmax(x)
 
         return output
@@ -100,7 +104,7 @@ class ResidualBlock(tf.keras.layers.Layer):
         
         x = self.conv_2(x)
         x = self.batch_norm_2(x, training=training)
-
+        
         output = tf.nn.relu(tf.keras.layers.add([residual, x]))
         return output
 
