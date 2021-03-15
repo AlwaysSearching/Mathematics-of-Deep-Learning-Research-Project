@@ -7,7 +7,9 @@ class Model_Trainer:
     # Training Wrapper For Tensorflow Models. Allows a predifined model to be easily trained
     # while also tracking parameter and gradient information.
     
-    def __init__(self, model, lr=5e-4, optimizer=None):
+    # Please ensure that model_id is unique. It provides the path for all model statistics.
+    
+    def __init__(self, model, model_id, lr=5e-4, optimizer=None):
                 
         self.lr = lr
         self.n_classes = model.n_classes       
@@ -23,10 +25,10 @@ class Model_Trainer:
             
         # Used to save the parameters of the model at a given point of time.
         self.checkpoint = tf.train.Checkpoint(model=self.model)
-        self.checkpoint_path = self.model.__class__.__name__ + "/training_checkpoints"
+        self.checkpoint_path = self.model.__class__.__name__ '/' + model_id + "/training_checkpoints"
 
 
-        self.summary_path = self.model.__class__.__name__ + '/summaries/'
+        self.summary_path = self.model.__class__.__name__ + '/' + model_id + '/summaries/'
         self.train_summary_writer = tf.summary.create_file_writer(self.summary_path + 'train')
         self.test_summary_writer = tf.summary.create_file_writer(self.summary_path + 'test')
         
