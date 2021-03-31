@@ -1,3 +1,4 @@
+Modified code for the CNN experiments from https://github.com/edouardoyallon/lazy-training-CNN
 Fixed issues that prevented the original repo from running
 
 changes: 
@@ -7,7 +8,7 @@ changes:
 4. added truncate_shape() to ensure shapes match in lazy_net() and net_activation()
 
 example for running a single experiment: py train.py --scaling_factor 10.0  --lr 0.01 --gain 1.0 --schedule 'b' --loss 'mse' --length 100 --precision 'float'
-note: 'length' is number of epochs
+note: script.sh simply runs similar commands with varying scaling factors and learning rates; 'length' is number of epochs
 output for example (first 3 epochs):
 Epoch: 0
 [99.90087121212126, 51.788640136718726, 99.73974589100344, 50.18372802734373, 99.5557412229938, 99.122844921875, 98.69636406249998, 98.82523980034722, 98.29132932079084, 49.159322916666675, 97.86321899414062, 96.99761015624999, 47.9044482421875, 93.66130859374998]
