@@ -20,7 +20,7 @@ net2=copy.deepcopy(net)
 FC2.weight.data.copy_(FC1.weight.data)
 FC2.bias.data.copy_(FC1.bias.data)
 
-# trains two identical networks and take the difference of outputs as the output for some reason
+# trains the combined model (two identical parallel models merged by subtracting the outputs of the dense tops)
 # the resulting difference of outputs from the two networks is then scaled by alpha (scaling factor) before being passed to loss function (for mse loss)
 # Training
 def train(epoch):
@@ -35,6 +35,7 @@ def train(epoch):
         optimizer.zero_grad()
         outputs_ = net(inputs)
         outputs2_ = net2(inputs)
+        # the two parallel models are merged here by subtracting first model's dense top by the other
         outputs = FC1(outputs_)-FC2(outputs2_)
         loss = None
         if args.loss == 'ce':
