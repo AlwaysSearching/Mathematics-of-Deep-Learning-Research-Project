@@ -109,12 +109,12 @@ def plot_loss_from_file_convnets(path, depth=7):
     # plot final and optimal early stopping train error
     train_accy_plt.plot(widths, 100*(1 - train_accuracy[:,-1]), marker='o', markersize=mrkr_size, label='Final Train Error')
     train_accy_plt.plot(widths, 100*(1 - optimal_early_train_accuracy), marker='o', markersize=mrkr_size, label='Optimal Early Stopping Train Accuracy')
-    train_accy_plt.set_ylabel('Train Accuracy', fontsize=16)
+    train_accy_plt.set_ylabel('Train Error', fontsize=16)
 
     # plot final and optimal early stopping test error
-    test_accy_plt.plot(widths, 100*(1 - test_accuracy[:,-1]), marker='o', markersize=mrkr_size, label='Final Test Accuracy')
+    test_accy_plt.plot(widths, 100*(1 - test_accuracy[:,-1]), marker='o', markersize=mrkr_size, label='Final Test Error')
     test_accy_plt.plot(widths, 100*(1 - optimal_early_test_accuracy), marker='o', markersize=mrkr_size, label='Optimal Early Stopping Test Error')
-    test_accy_plt.set_ylabel('Test Accuracy', fontsize=16)
+    test_accy_plt.set_ylabel('Test Error', fontsize=16)
 
     for ax in axes.flatten():
         ax.set_xlabel('Layer Width', fontsize=16)
@@ -123,6 +123,7 @@ def plot_loss_from_file_convnets(path, depth=7):
 
     fig.tight_layout(pad=1.15, h_pad=2)
     plt.show()
+    
     
 def plot_loss_vs_epoch_from_file_convnets(
     path, 
