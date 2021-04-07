@@ -18,7 +18,7 @@ def train_conv_nets(
     label_noise_as_int=10,
     scaled_loss_alpha=None,
     n_batch_steps=500_000,
-    optimizer=None
+    optimizer=None,
     save=True
 ):    
     '''
@@ -48,7 +48,8 @@ def train_conv_nets(
         scaled_loss = 'sparse_categorical_crossentropy' 
     else:
         scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
-    alpha=scaled_loss_alpha
+        
+    alpha= scaled_loss_alpha if scaled_loss_alpha is not None else 1
     label_noise = label_noise_as_int / 100
     
     # load the relevent dataset
