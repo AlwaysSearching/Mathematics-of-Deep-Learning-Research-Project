@@ -52,12 +52,13 @@ def train_conv_nets(
     alpha= scaled_loss_alpha if scaled_loss_alpha is not None else 1
     label_noise = label_noise_as_int / 100
     
-    # load the relevent dataset
+    # load the relevent dataset. Note that the training data is cast to tf.float32 and normalized by 255.
     (x_train, y_train), (x_test, y_test), image_shape = load_data(data_set, label_noise, augment_data=False)
 
     batch_size = 128
     # total number desirec SGD steps / number batches per epoch = n_epochs
     n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
+    n_classes = tf.math.reduce_max(y_train).numpy()
     
     
     # store results for later graphing and analysis.
@@ -70,7 +71,7 @@ def train_conv_nets(
 
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
-        conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width)
+        conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes)
 
         conv_net.compile(
             optimizer=tf.keras.optimizers.SGD(learning_rate=inverse_squareroot_lr()) if optimizer is None else optimizer,
@@ -104,6 +105,95 @@ def train_conv_nets(
             
     return metrics
 
+def train_resnet18(
+    data_set,
+    resnet_widths,
+    label_noise_as_int=10,
+    scaled_loss_alpha=None,
+    n_epochs=4_000,
+    optimizer=None,
+    save=True
+):    
+    '''
+        Train and save the results of ResNets nets of a given range of model widths.
+        
+        Parameters
+        ----------
+        data_set: str
+            Which data set to train on. See the load data funciton. 
+        resnet_widths: list[int]
+            List of model widths to train.
+        label_noise_as_int: int
+            Percentage of label noise to add to the training data.
+        scaled_loss_alpha: float
+            The alplha value used to scale the cross entropy loss used during training.
+        n_epochs: int
+            number of epochs to train.
+        optimizer: tf.keras.optimizer
+            Optimizer to use while training resnets. Default is Adam with a learning rate of 1e-4.
+        save: bool
+            whether to save the data and trained model weights.
+    '''
+    
+    if scaled_loss_alpha is None:
+        scaled_loss = 'sparse_categorical_crossentropy' 
+    else:
+        scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
+        
+    alpha= scaled_loss_alpha if scaled_loss_alpha is not None else 1
+    label_noise = label_noise_as_int / 100
+    
+    # load the relevent dataset
+    (x_train, y_train), (x_test, y_test), image_shape = load_data(data_set, label_noise, augment_data=False)
+
+    batch_size = 128
+    n_classes = tf.math.reduce_max(y_train).numpy()
+    
+    # store results for later graphing and analysis.
+    model_histories = {}
+    metrics = {}
+
+    # Paths to save model weights and experimental results.
+    model_weights_paths = f'trained_model_weights_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}/'
+    data_save_path = f'experimental_results_{data_set}/resnet18_'
+
+    for width in resnet_widths:
+        # Resnet18 with Kaiming Uniform Initialization.
+        resnet, model_id = make_resnet18_UniformHe([batch_size] + image_shape, k=width, num_classes=n_classes)
+
+        resnet.compile(
+            optimizer=tf.keras.optimizers.Adam(1e-4),
+            loss=scaled_loss ,
+            metrics=['accuracy']
+        )        
+        resnet.build([batch_size] + image_shape)
+
+        model_timer = timer()
+        parameter_tracker = Track_Weight_Change_onEpoch()
+        
+        print(f'STARTING TRAINING: {model_id}, Alpha: {alpha}')
+        history = resnet.fit(
+            x=x_train, y=y_train, 
+            validation_data=(x_test, y_test),
+            epochs=n_epochs,
+            batch_size=batch_size,
+            verbose=0, 
+            callbacks = [model_timer, parameter_tracker]
+        )
+        print(f'FINISHED TRAINING: {model_id}')    
+
+        # add results to dictionary and store the resulting model weights.
+        metrics[model_id] = history.history
+        
+        # clear GPU of prior model to decrease training times.
+        tf.keras.backend.clear_session()
+        
+        # Save results to the data file
+        if save:
+            pkl.dump(metrics, open(data_save_path + f'{label_noise_as_int}pct_noise_alpha_{alpha}.pkl', 'wb'))
+            history.model.save_weights(model_weights_paths+model_id)
+            
+    return metrics
 
 
 def get_scaled_sparse_categorical_loss(alpha=1):
@@ -155,9 +245,13 @@ def load_data(data_set, label_noise, augment_data=False):
         rand_labels = np.random.randint(low=y_train.min(), high=y_train.max(), size=len(random_idx))
         y_train[random_idx] = np.expand_dims(rand_labels, axis=1)
     
+    # cast values to tf.float32 and normalize images to range [0-1]
+    x_train, x_test = tf.cast(x_train, tf.float32) / 255, tf.cast(x_train, tf.float32) / 255
+    y_train, y_test = tf.cast(y_train, tf.float32), tf.cast(y_test, tf.float32)
+    
     #TODO: Add data augmentation.
     
-    return (x_train, y_train), (x_test, y_test), image_shape
+    return (x_train, y_train), (x_test, y_test), list(image_shape)
 
 
 def augment_data_set(data_set, crop_dim=32, target_height=36, target_width=36):
@@ -183,12 +277,13 @@ def augment_data_set(data_set, crop_dim=32, target_height=36, target_width=36):
         'crop': data_set_drop
     }
 
+
 class Track_Weight_Change_onEpoch(tf.keras.callbacks.Callback):
     '''
         Tensorflow Call back to track the L2 norm in the difference between the intial model weights 
         and the model weights at the end of each epoch.
         
-        We only want to track the change in the kernels of convolutional and dense layers.
+        We only track the change in the kernels of convolutional and dense layers.
     '''
     
     def __init__(self):
