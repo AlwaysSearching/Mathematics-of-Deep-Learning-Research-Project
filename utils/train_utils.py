@@ -6,6 +6,10 @@ from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.metrics import Mean, SparseCategoricalAccuracy
 
 import time
+import numpy as np
+import pickle as pkl
+
+from models.conv_nets import make_convNet
 
 def train_conv_nets(
     data_set,
@@ -14,10 +18,13 @@ def train_conv_nets(
     label_noise_as_int=10,
     scaled_loss_alpha=None,
     n_batch_steps=500_000,
+    optimizer=None
     save=True
 ):    
     '''
         Train and save the results of Conv nets of a given range of model widths.
+        
+        Note: 500_000 is approximately 1250 epochs. 1_600_000 batchs is approximately 4K epochs. 
         
         Parameters
         ----------
@@ -65,7 +72,7 @@ def train_conv_nets(
         conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width)
 
         conv_net.compile(
-            optimizer=tf.keras.optimizers.SGD(learning_rate=inverse_squareroot_lr()),
+            optimizer=tf.keras.optimizers.SGD(learning_rate=inverse_squareroot_lr()) if optimizer is None else optimizer,
             loss=scaled_loss ,
             metrics=['accuracy']
         )
