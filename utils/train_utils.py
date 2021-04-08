@@ -160,13 +160,14 @@ def train_resnet18(
     for width in resnet_widths:
         # Resnet18 with Kaiming Uniform Initialization.
         resnet, model_id = make_resnet18_UniformHe([batch_size] + image_shape, k=width, num_classes=n_classes)
-
+        
+        # commpile and pass input to initialize parameters.
         resnet.compile(
             optimizer=tf.keras.optimizers.Adam(1e-4),
             loss=scaled_loss ,
             metrics=['accuracy']
         )        
-        resnet.build([batch_size] + image_shape)
+        resnet(tf.keras.Input(shape=list(image_shape), batch_size=batch_size))
 
         model_timer = timer()
         parameter_tracker = Track_Weight_Change_onEpoch()
@@ -246,7 +247,7 @@ def load_data(data_set, label_noise, augment_data=False):
         y_train[random_idx] = np.expand_dims(rand_labels, axis=1)
     
     # cast values to tf.float32 and normalize images to range [0-1]
-    x_train, x_test = tf.cast(x_train, tf.float32) / 255, tf.cast(x_train, tf.float32) / 255
+    x_train, x_test = tf.cast(x_train, tf.float32) / 255, tf.cast(x_test, tf.float32) / 255
     y_train, y_test = tf.cast(y_train, tf.float32), tf.cast(y_test, tf.float32)
     
     #TODO: Add data augmentation.
