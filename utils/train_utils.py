@@ -162,8 +162,8 @@ def train_resnet18(
     for width in resnet_widths:
         # Resnet18 with Kaiming Uniform Initialization.
         resnet, model_id = make_resnet18_UniformHe(image_shape, k=width, num_classes=n_classes)
-        
-        # commpile and pass input to initialize parameters.
+
+        # compile and pass input to initialize parameters.
         resnet.compile(
             optimizer=tf.keras.optimizers.Adam(1e-4) if optimizer is None else optimizer,
             loss=scaled_loss ,
