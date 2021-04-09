@@ -10,6 +10,7 @@ import numpy as np
 import pickle as pkl
 
 from models.conv_nets import make_convNet
+from models.resnet import make_resnet18_UniformHe
 
 def train_conv_nets(
     data_set,
@@ -67,8 +68,9 @@ def train_conv_nets(
 
     # Paths to save model weights and 
     model_weights_paths = f'trained_model_weights_{data_set}/conv_nets_depth_{convnet_depth}_{label_noise_as_int}pct_noise_alpha_{alpha}/'
-    data_save_path = f'experimental_results_{data_set}/conv_nets_'
-
+    data_save_path = 'experimental_results_{}/conv_nets_depth_{}_{}pct_noise_alpha_{}'.format(
+                    data_set, convnet_depth, label_noise_as_int, alpha).replace('.', '_') + '.pkl'
+    
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes)
@@ -98,9 +100,9 @@ def train_conv_nets(
         # clear GPU of prior model to decrease training times.
         tf.keras.backend.clear_session()
         
-        # Save results to the data file
+        # Save results to the data file. 
         if save:
-            pkl.dump(metrics, open(data_save_path + f'depth_{convnet_depth}_{label_noise_as_int}pct_noise_alpha_{alpha}.pkl', 'wb'))
+            pkl.dump(metrics, open(data_save_path, 'wb'))
             history.model.save_weights(model_weights_paths+model_id)
             
     return metrics
@@ -147,7 +149,7 @@ def train_resnet18(
     (x_train, y_train), (x_test, y_test), image_shape = load_data(data_set, label_noise, augment_data=False)
 
     batch_size = 128
-    n_classes = tf.math.reduce_max(y_train).numpy()
+    n_classes = tf.math.reduce_max(y_train).numpy() + 1
     
     # store results for later graphing and analysis.
     model_histories = {}
@@ -155,15 +157,15 @@ def train_resnet18(
 
     # Paths to save model weights and experimental results.
     model_weights_paths = f'trained_model_weights_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}/'
-    data_save_path = f'experimental_results_{data_set}/resnet18_'
+    data_save_path = f'experimental_results_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}'.replace('.', '_') + '.pkl'
 
     for width in resnet_widths:
         # Resnet18 with Kaiming Uniform Initialization.
-        resnet, model_id = make_resnet18_UniformHe([batch_size] + image_shape, k=width, num_classes=n_classes)
-        
-        # commpile and pass input to initialize parameters.
+        resnet, model_id = make_resnet18_UniformHe(image_shape, k=width, num_classes=n_classes)
+
+        # compile and pass input to initialize parameters.
         resnet.compile(
-            optimizer=tf.keras.optimizers.Adam(1e-4),
+            optimizer=tf.keras.optimizers.Adam(1e-4) if optimizer is None else optimizer,
             loss=scaled_loss ,
             metrics=['accuracy']
         )        
@@ -174,7 +176,8 @@ def train_resnet18(
         
         print(f'STARTING TRAINING: {model_id}, Alpha: {alpha}')
         history = resnet.fit(
-            x=x_train, y=y_train, 
+            x=x_train, 
+            y=y_train, 
             validation_data=(x_test, y_test),
             epochs=n_epochs,
             batch_size=batch_size,
@@ -191,7 +194,7 @@ def train_resnet18(
         
         # Save results to the data file
         if save:
-            pkl.dump(metrics, open(data_save_path + f'{label_noise_as_int}pct_noise_alpha_{alpha}.pkl', 'wb'))
+            pkl.dump(metrics, open(data_save_path, 'wb'))
             history.model.save_weights(model_weights_paths+model_id)
             
     return metrics
