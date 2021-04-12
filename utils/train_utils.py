@@ -329,14 +329,15 @@ class timer(tf.keras.callbacks.Callback):
     '''
         Simle call back class to track total training time.
     '''
-    def __init__(self):
+    def __init__(self, n_epochs=25):
         super().__init__()
         
         self.start_time = time.perf_counter()
+        self.n_epochs=n_epochs
     
     def on_epoch_end(self, epoch, logs=None):
         ''' Help keep track of total training time needed for various models. '''   
-        if epoch % 25 == 0:
+        if epoch % self.n_epochs == 0:
             end_time = time.perf_counter()
             run_time = end_time - self.start_time
             hrs, mnts, secs = int(run_time // 60 // 60), int(run_time // 60 % 60), int(run_time % 60)
