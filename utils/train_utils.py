@@ -74,7 +74,7 @@ def train_conv_nets(
     data_save_path = 'experimental_results_{}/conv_nets_depth_{}_{}pct_noise_alpha_{}'.format(
                     data_set, convnet_depth, label_noise_as_int, alpha).replace('.', '_') + '.pkl'
     if data_save_path_prefix:
-       data_save_path = data_save_path_prefix + '/' + data_save_path
+        data_save_path = data_save_path_prefix + '/' + data_save_path
 
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
@@ -164,7 +164,7 @@ def train_resnet18(
     
     # total number desirec SGD steps / number batches per epoch = n_epochs
     if not n_epochs:
-      n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
+        n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
 
     # store results for later graphing and analysis.
     model_histories = {}
@@ -174,7 +174,7 @@ def train_resnet18(
     model_weights_paths = f'trained_model_weights_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}/'
     data_save_path = f'experimental_results_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}'.replace('.', '_') + '.pkl'
     if data_save_path_prefix:
-       data_save_path = data_save_path_prefix + '/' + data_save_path
+        data_save_path = data_save_path_prefix + '/' + data_save_path
     
     for width in resnet_widths:
         # Resnet18 with Kaiming Uniform Initialization.
