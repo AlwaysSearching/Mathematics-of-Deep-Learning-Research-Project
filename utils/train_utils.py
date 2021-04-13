@@ -74,7 +74,7 @@ def train_conv_nets(
     data_save_path = 'experimental_results_{}/conv_nets_depth_{}_{}pct_noise_alpha_{}'.format(
                     data_set, convnet_depth, label_noise_as_int, alpha).replace('.', '_') + '.pkl'
     if data_save_path_prefix:
-       data_save_path = data_save_path_prefix + '/' + data_save_path
+        data_save_path = data_save_path_prefix + '/' + data_save_path
 
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
