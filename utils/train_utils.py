@@ -20,7 +20,8 @@ def train_conv_nets(
     scaled_loss_alpha=None,
     n_batch_steps=500_000,
     optimizer=None,
-    save=True
+    save=True,
+    data_save_path_prefix=''
 ):    
     '''
         Train and save the results of Conv nets of a given range of model widths.
@@ -43,6 +44,8 @@ def train_conv_nets(
             number of gradient descent steps to take.
         save: bool
             whether to save the data and trained model weights.
+        data_save_path_prefix: str
+            prefix to add to the save pkl file path.
     '''
     
     if scaled_loss_alpha is None:
@@ -70,7 +73,9 @@ def train_conv_nets(
     model_weights_paths = f'trained_model_weights_{data_set}/conv_nets_depth_{convnet_depth}_{label_noise_as_int}pct_noise_alpha_{alpha}/'
     data_save_path = 'experimental_results_{}/conv_nets_depth_{}_{}pct_noise_alpha_{}'.format(
                     data_set, convnet_depth, label_noise_as_int, alpha).replace('.', '_') + '.pkl'
-    
+    if data_save_path_prefix:
+       data_save_path = data_save_path_prefix + '/' + data_save_path
+
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes)
@@ -112,9 +117,11 @@ def train_resnet18(
     resnet_widths,
     label_noise_as_int=10,
     scaled_loss_alpha=None,
-    n_epochs=4_000,
+    n_epochs=None,
+    n_batch_steps=500_000,
     optimizer=None,
-    save=True
+    save=True,
+    data_save_path_prefix=''
 ):    
     '''
         Train and save the results of ResNets nets of a given range of model widths.
@@ -130,11 +137,15 @@ def train_resnet18(
         scaled_loss_alpha: float
             The alplha value used to scale the cross entropy loss used during training.
         n_epochs: int
-            number of epochs to train.
+            number of epochs to train, if not specified, will calculate with n_batch_steps
+        n_batch_steps: int
+            number of gradient descent steps to take, over-ridden if n_epochs is specified
         optimizer: tf.keras.optimizer
             Optimizer to use while training resnets. Default is Adam with a learning rate of 1e-4.
         save: bool
             whether to save the data and trained model weights.
+        data_save_path_prefix: str
+            prefix to add to the save pkl file path.
     '''
     
     if scaled_loss_alpha is None:
@@ -151,6 +162,10 @@ def train_resnet18(
     batch_size = 128
     n_classes = tf.math.reduce_max(y_train).numpy() + 1
     
+    # total number desirec SGD steps / number batches per epoch = n_epochs
+    if not n_epochs:
+      n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
+
     # store results for later graphing and analysis.
     model_histories = {}
     metrics = {}
@@ -158,7 +173,9 @@ def train_resnet18(
     # Paths to save model weights and experimental results.
     model_weights_paths = f'trained_model_weights_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}/'
     data_save_path = f'experimental_results_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}'.replace('.', '_') + '.pkl'
-
+    if data_save_path_prefix:
+       data_save_path = data_save_path_prefix + '/' + data_save_path
+    
     for width in resnet_widths:
         # Resnet18 with Kaiming Uniform Initialization.
         resnet, model_id = make_resnet18_UniformHe(image_shape, k=width, num_classes=n_classes)
@@ -329,14 +346,15 @@ class timer(tf.keras.callbacks.Callback):
     '''
         Simle call back class to track total training time.
     '''
-    def __init__(self):
+    def __init__(self, n_epochs=25):
         super().__init__()
         
         self.start_time = time.perf_counter()
+        self.n_epochs=n_epochs
     
     def on_epoch_end(self, epoch, logs=None):
         ''' Help keep track of total training time needed for various models. '''   
-        if epoch % 25 == 0:
+        if epoch % self.n_epochs == 0:
             end_time = time.perf_counter()
             run_time = end_time - self.start_time
             hrs, mnts, secs = int(run_time // 60 // 60), int(run_time // 60 % 60), int(run_time % 60)
