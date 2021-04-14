@@ -62,7 +62,7 @@ def train_conv_nets(
     batch_size = 128
     # total number desirec SGD steps / number batches per epoch = n_epochs
     n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
-    n_classes = tf.math.reduce_max(y_train).numpy()
+    n_classes = tf.math.reduce_max(y_train).numpy() + 1
     
     
     # store results for later graphing and analysis.
