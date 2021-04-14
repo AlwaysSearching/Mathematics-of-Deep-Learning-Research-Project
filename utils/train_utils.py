@@ -85,7 +85,8 @@ def train_conv_nets(
 
     # add possilbe data save path identifiers.
     if data_save_path_prefix:
-        data_save_path = data_save_path_prefix + "/" + data_save_path
+      model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
+      data_save_path = data_save_path_prefix + '/' + data_save_path
 
     if data_save_path_suffix:
         data_save_path = data_save_path + data_save_path_suffix
@@ -206,7 +207,8 @@ def train_resnet18(
 
     # add possible path identifiers.
     if data_save_path_prefix:
-        data_save_path = data_save_path_prefix + "/" + data_save_path
+        model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
+        data_save_path = data_save_path_prefix + '/' + data_save_path
 
     if data_save_path_suffix:
         data_save_path = data_save_path + data_save_path_suffix
