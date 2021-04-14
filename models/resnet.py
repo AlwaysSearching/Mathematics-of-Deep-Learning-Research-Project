@@ -81,7 +81,7 @@ class ResNet(Model):
         self.flatten = Flatten()
 
         # Linear output -> Use from_logits = True with Sparse Categorical Cross Entropy.
-        self.softmax = Dense(units=n_classes)
+        self.linear = Dense(units=n_classes)
 
     def _make_residual_block_layer(self, n_filters, block_depth, stride=1):
         # Define a sequential network which is composed of sequential residual blocks with the same # of filters
@@ -109,7 +109,7 @@ class ResNet(Model):
 
         x = self.avgpool(x)
         x = self.flatten(x)
-        output = self.softmax(x)
+        output = self.linear(x)
 
         return output
 
