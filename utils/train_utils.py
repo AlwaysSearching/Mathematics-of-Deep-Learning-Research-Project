@@ -149,7 +149,7 @@ def train_resnet18(
     '''
     
     if scaled_loss_alpha is None:
-        scaled_loss = 'sparse_categorical_crossentropy' 
+        scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     else:
         scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
         
@@ -226,7 +226,7 @@ def get_scaled_sparse_categorical_loss(alpha=1):
         (https://arxiv.org/pdf/1812.07956.pdf)
     '''
     def scaled_sparse_categorical_loss(y_actual, y_pred):
-        sce = tf.keras.losses.SparseCategoricalCrossentropy()
+        sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         scaled_sce = sce(y_actual, alpha*y_pred)/alpha**2
         return scaled_sce
     
