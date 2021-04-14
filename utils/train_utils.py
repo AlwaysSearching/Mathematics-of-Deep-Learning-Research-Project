@@ -23,7 +23,8 @@ def train_conv_nets(
     optimizer=None,
     save=True,
     data_save_path_prefix="",
-    data_save_path_suffix=""
+    data_save_path_suffix="",
+    load_saved_metrics=False
 ):
     """
     Train and save the results of Conv nets of a given range of model widths.
@@ -50,6 +51,10 @@ def train_conv_nets(
         prefix to add to the save pkl file path.
     data_save_path_suffix: str
         suffix to add to the save pkl file name.
+    load_saved_metrics: bool
+        if True, will attempt to load the metrics from a previous training session in the save_path,
+        to continue training from there. If True, will load the saved .pkl file instead of starting
+        over and overwriting it. 
     """
 
     if scaled_loss_alpha is None:
@@ -89,9 +94,32 @@ def train_conv_nets(
       data_save_path = data_save_path_prefix + '/' + data_save_path
 
     if data_save_path_suffix:
-        data_save_path = data_save_path + data_save_path_suffix
+        assert data_save_path[-4:] == ".pkl"
+        data_save_path = data_save_path[:-4] + data_save_path_suffix + ".pkl"
+
+    if load_saved_metrics:
+        try:
+            with open(data_save_path, 'rb') as f:
+                metrics = pkl.load(f)
+        except Exception as e:
+            print('Could not find saved metrics.pkl file, exiting')
+            raise e
+
+        loaded_widths = [int(i.split('_')[-1]) for i in metrics.keys()]
+        assert len(loaded_widths) == max(loaded_widths)
+        assert list(range(1, max(loaded_widths)+1)) == loaded_widths
+        print('loaded results for width %s from existing file at %s' %(', '.join([str(i) for i in loaded_widths]), data_save_path))
+
+        assert data_save_path[-4:] == ".pkl"
+        data_backup_path = data_save_path[:-4] + 'backup_w%d_' %loaded_widths[-1] + time.strftime("%D_%H%M%S").replace('/', '') + ".pkl"
+        print('saving existing result.pkl to backup at %s' %data_backup_path)
+        pkl.dump(metrics, open(data_backup_path, "wb"))
 
     for width in convnet_widths:
+        if load_saved_metrics and width in loaded_widths:
+            print('width %d results already loaded from .pkl file, training skipped' %width)
+            continue
+
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(
             image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes
@@ -143,7 +171,8 @@ def train_resnet18(
     optimizer=None,
     save=True,
     data_save_path_prefix="",
-    data_save_path_suffix=""
+    data_save_path_suffix="",
+    load_saved_metrics=False
 ):
     """
     Train and save the results of ResNets nets of a given range of model widths.
@@ -170,6 +199,10 @@ def train_resnet18(
         prefix to add to the save pkl file path.
     data_save_path_suffix: str
         suffix to add to the save pkl file name.
+    load_saved_metrics: bool
+        if True, will attempt to load the metrics from a previous training session in the save_path,
+        to continue training from there. If True, will load the saved .pkl file instead of starting
+        over and overwriting it. 
     """
 
     if scaled_loss_alpha is None:
@@ -211,9 +244,32 @@ def train_resnet18(
         data_save_path = data_save_path_prefix + '/' + data_save_path
 
     if data_save_path_suffix:
-        data_save_path = data_save_path + data_save_path_suffix
+        assert data_save_path[-4:] == ".pkl"
+        data_save_path = data_save_path[:-4] + data_save_path_suffix + ".pkl"
+
+    if load_saved_metrics:
+        try:
+            with open(data_save_path, 'rb') as f:
+                metrics = pkl.load(f)
+        except Exception as e:
+            print('Could not find saved metrics.pkl file, exiting')
+            raise e
+
+        loaded_widths = [int(i.split('_')[-1]) for i in metrics.keys()]
+        assert len(loaded_widths) == max(loaded_widths)
+        assert list(range(1, max(loaded_widths)+1)) == loaded_widths
+        print('loaded results for width %s from existing file at %s' %(', '.join([str(i) for i in loaded_widths]), data_save_path))
+
+        assert data_save_path[-4:] == ".pkl"
+        data_backup_path = data_save_path[:-4] + 'backup_w%d_' %loaded_widths[-1] + time.strftime("%D_%H%M%S").replace('/', '') + ".pkl"
+        print('saving existing result.pkl to backup at %s' %data_backup_path)
+        pkl.dump(metrics, open(data_backup_path, "wb"))
 
     for width in resnet_widths:
+        if load_saved_metrics and width in loaded_widths:
+            print('width %d results already loaded from .pkl file, training skipped' %width)
+            continue
+
         # Resnet18 with Kaiming Uniform Initialization.
         resnet, model_id = make_resnet18_UniformHe(
             image_shape, k=width, num_classes=n_classes
