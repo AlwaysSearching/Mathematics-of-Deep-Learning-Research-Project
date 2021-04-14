@@ -31,7 +31,9 @@ def load_results(path):
 
     for model_id, history in metrics.items():
         # all models are named in the form 'conv_net_depth_{depth}_width_{init_channels}'
-        widths.append(int(model_id[23:]))
+        # or ResNet18_width_{width}_UniformHe_init. 
+        width = list(filter(lambda x: x.isnumeric(), model_id.split('_')))[-1]
+        widths.append(int(width))
         
         train_losses.append(history.get('loss'))
         train_accuracy.append(history.get('accuracy'))
@@ -51,7 +53,7 @@ def load_results(path):
         'val_accuracy': test_accuracy   
     }
 
-def plot_loss_from_file_convnets(path, depth=7):
+def plot_loss_from_file(path):
     '''
         Function to plot the results from previous runs stored in the experimental_results folder.
         
@@ -91,8 +93,6 @@ def plot_loss_from_file_convnets(path, depth=7):
     test_loss_plt = axes[0][1]
     train_accy_plt = axes[1][0]
     test_accy_plt = axes[1][1]
-
-    fig.suptitle(f'Depth {depth} Conv Net Results:', fontsize=24, fontweight='bold')
     
     mrkr_size = 2
     
@@ -125,7 +125,7 @@ def plot_loss_from_file_convnets(path, depth=7):
     plt.show()
     
     
-def plot_loss_vs_epoch_from_file_convnets(
+def plot_loss_vs_epoch_from_file(
     path, 
     x_idx,
     contour_levels=[0.1],
@@ -176,7 +176,7 @@ def plot_loss_vs_epoch_from_file_convnets(
     vmax = np.max(train_error)
     norm = matplotlib.colors.Normalize(vmin, vmax)
     # seaplot train data
-    train_im = train_plot.imshow(train_error.T, aspect='auto',  origin='lower', norm=norm, interpolation='gaussian') 
+    train_im = train_plot.imshow(train_error.T, aspect='auto',  origin='lower', norm=norm, interpolation='nearest') 
     
     # set axis labels and title
     train_plot.set_xlabel(f'Width', fontsize=ax_label_fs, labelpad=ax_label_pad)

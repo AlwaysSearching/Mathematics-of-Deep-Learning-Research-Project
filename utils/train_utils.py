@@ -62,7 +62,7 @@ def train_conv_nets(
     batch_size = 128
     # total number desirec SGD steps / number batches per epoch = n_epochs
     n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
-    n_classes = tf.math.reduce_max(y_train).numpy()
+    n_classes = tf.math.reduce_max(y_train).numpy() + 1
     
     
     # store results for later graphing and analysis.
@@ -74,9 +74,14 @@ def train_conv_nets(
     data_save_path = 'experimental_results_{}/conv_nets_depth_{}_{}pct_noise_alpha_{}'.format(
                     data_set, convnet_depth, label_noise_as_int, alpha).replace('.', '_') + '.pkl'
     if data_save_path_prefix:
+<<<<<<< HEAD
       model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
       data_save_path = data_save_path_prefix + '/' + data_save_path
        
+=======
+        data_save_path = data_save_path_prefix + '/' + data_save_path
+
+>>>>>>> 619663dc5f1a0c696d6c858a677ed4bb74f19bdb
     for width in convnet_widths:
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes)
@@ -150,7 +155,7 @@ def train_resnet18(
     '''
     
     if scaled_loss_alpha is None:
-        scaled_loss = 'sparse_categorical_crossentropy' 
+        scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     else:
         scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
         
@@ -165,7 +170,7 @@ def train_resnet18(
     
     # total number desirec SGD steps / number batches per epoch = n_epochs
     if not n_epochs:
-      n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
+        n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
 
     # store results for later graphing and analysis.
     model_histories = {}
@@ -175,7 +180,10 @@ def train_resnet18(
     model_weights_paths = f'trained_model_weights_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}/'
     data_save_path = f'experimental_results_{data_set}/resnet18_{label_noise_as_int}pct_noise_alpha_{alpha}'.replace('.', '_') + '.pkl'
     if data_save_path_prefix:
+<<<<<<< HEAD
         model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
+=======
+>>>>>>> 619663dc5f1a0c696d6c858a677ed4bb74f19bdb
         data_save_path = data_save_path_prefix + '/' + data_save_path
     
     for width in resnet_widths:
@@ -228,7 +236,7 @@ def get_scaled_sparse_categorical_loss(alpha=1):
         (https://arxiv.org/pdf/1812.07956.pdf)
     '''
     def scaled_sparse_categorical_loss(y_actual, y_pred):
-        sce = tf.keras.losses.SparseCategoricalCrossentropy()
+        sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         scaled_sce = sce(y_actual, alpha*y_pred)/alpha**2
         return scaled_sce
     
@@ -348,14 +356,15 @@ class timer(tf.keras.callbacks.Callback):
     '''
         Simle call back class to track total training time.
     '''
-    def __init__(self):
+    def __init__(self, n_epochs=25):
         super().__init__()
         
         self.start_time = time.perf_counter()
+        self.n_epochs=n_epochs
     
     def on_epoch_end(self, epoch, logs=None):
         ''' Help keep track of total training time needed for various models. '''   
-        if epoch % 25 == 0:
+        if epoch % self.n_epochs == 0:
             end_time = time.perf_counter()
             run_time = end_time - self.start_time
             hrs, mnts, secs = int(run_time // 60 // 60), int(run_time // 60 % 60), int(run_time % 60)
