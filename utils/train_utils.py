@@ -106,8 +106,7 @@ def train_conv_nets(
             raise e
 
         loaded_widths = [int(i.split('_')[-1]) for i in metrics.keys()]
-        assert len(loaded_widths) == max(loaded_widths)
-        assert list(range(1, max(loaded_widths)+1)) == loaded_widths
+        assert convnet_widths[:len(loaded_widths)] == loaded_widths
         print('loaded results for width %s from existing file at %s' %(', '.join([str(i) for i in loaded_widths]), data_save_path))
 
         assert data_save_path[-4:] == ".pkl"
@@ -256,8 +255,7 @@ def train_resnet18(
             raise e
 
         loaded_widths = [int(i.split('_')[-1]) for i in metrics.keys()]
-        assert len(loaded_widths) == max(loaded_widths)
-        assert list(range(1, max(loaded_widths)+1)) == loaded_widths
+        assert convnet_widths[:len(loaded_widths)] == loaded_widths
         print('loaded results for width %s from existing file at %s' %(', '.join([str(i) for i in loaded_widths]), data_save_path))
 
         assert data_save_path[-4:] == ".pkl"
