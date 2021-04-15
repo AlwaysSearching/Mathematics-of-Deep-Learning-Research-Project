@@ -18,6 +18,7 @@ def train_conv_nets(
     convnet_depth,
     convnet_widths,
     label_noise_as_int=10,
+    augment_data=False,
     scaled_loss_alpha=None,
     n_batch_steps=500_000,
     optimizer=None,
@@ -41,6 +42,9 @@ def train_conv_nets(
         List of model widths to train.
     label_noise_as_int: int
         Percentage of label noise to add to the training data.
+    augment_data: bool
+        Whether of not to apply random cropping and random left right flipping to the training data. 
+        Default value is set to false. Augmentation is applied  at train time.
     scaled_loss_alpha: float
         The alplha value used to scale the cross entropy loss used during training.
     n_batch_steps: int
@@ -66,15 +70,13 @@ def train_conv_nets(
     label_noise = label_noise_as_int / 100
 
     # load the relevent dataset. Note that the training data is cast to tf.float32 and normalized by 255.
-    (x_train, y_train), (x_test, y_test), image_shape = load_data(
-        data_set, label_noise, augment_data=False
-    )
+    (x_train, y_train), (x_test, y_test), image_shape = load_data(data_set, label_noise)
 
     batch_size = 128
     # total number desirec SGD steps / number batches per epoch = n_epochs
     n_epochs = n_batch_steps // (x_train.shape[0] // batch_size)
     n_classes = tf.math.reduce_max(y_train).numpy() + 1
-
+    
     # store results for later graphing and analysis.
     model_histories = {}
     metrics = {}
@@ -90,13 +92,14 @@ def train_conv_nets(
 
     # add possilbe data save path identifiers.
     if data_save_path_prefix:
-      model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
-      data_save_path = data_save_path_prefix + '/' + data_save_path
+        model_weights_paths = data_save_path_prefix + '/' + model_weights_paths
+        data_save_path = data_save_path_prefix + '/' + data_save_path
 
     if data_save_path_suffix:
         assert data_save_path[-4:] == ".pkl"
         data_save_path = data_save_path[:-4] + data_save_path_suffix + ".pkl"
-
+    
+    # load data from prior runs of related experiment.
     if load_saved_metrics:
         try:
             with open(data_save_path, 'rb') as f:
@@ -134,6 +137,7 @@ def train_conv_nets(
         )
 
         model_timer = timer()
+        parameter_tracker = Track_Weight_Change_onEpoch()
 
         print(f"STARTING TRAINING: {model_id}, Alpha: {alpha}")
         history = conv_net.fit(
@@ -143,7 +147,7 @@ def train_conv_nets(
             epochs=n_epochs,
             batch_size=batch_size,
             verbose=0,
-            callbacks=[model_timer, Track_Weight_Change_onEpoch()],
+            callbacks=[model_timer, parameter_tracker],
         )
         print(f"FINISHED TRAINING: {model_id}")
 
@@ -159,6 +163,19 @@ def train_conv_nets(
             history.model.save_weights(model_weights_paths + model_id)
 
     return metrics
+
+def rand_crop(image, padded_height=36, padded_width=36, crop_dim=32):
+    """
+       Helper function to apply random cropping to the training data set via tf.keras.preprocessing.image.ImageDataGenerator.
+    """
+    height_pad = padded_height-crop_dim
+    width_pad = padded_width-crop_dim
+    
+    offset_height = tf.random.uniform([], 0, padded_height, dtype=tf.int32).numpy()
+    offset_width = tf.random.uniform([], 0, width_pad, dtype=tf.int32).numpy()
+    
+    image = tf.image.pad_to_bounding_box(image, height_pad // 2, width_pad // 2, padded_height, padded_width)
+    return tf.image.random_crop(image, size=[crop_dim, crop_dim, image.shape[2]])
 
 
 def train_resnet18(
@@ -214,9 +231,7 @@ def train_resnet18(
     label_noise = label_noise_as_int / 100
 
     # load the relevent dataset
-    (x_train, y_train), (x_test, y_test), image_shape = load_data(
-        data_set, label_noise, augment_data=False
-    )
+    (x_train, y_train), (x_test, y_test), image_shape = load_data(data_set, label_noise)
 
     batch_size = 128
     n_classes = tf.math.reduce_max(y_train).numpy() + 1
@@ -277,7 +292,7 @@ def train_resnet18(
 
         # compile and pass input to initialize parameters.
         resnet.compile(
-            optimizer=tf.keras.optimizers.Adam(1e-4)
+            optimizer=tf.keras.optimizers.Adam(1e-4, epsilon=1e-08)
             if optimizer is None
             else optimizer,
             loss=scaled_loss,
@@ -331,16 +346,17 @@ def get_scaled_sparse_categorical_loss(alpha=1):
     return scaled_sparse_categorical_loss
 
 
-def load_data(data_set, label_noise, augment_data=False):
+def load_data(data_set, label_noise):
     """
     Helper Function to Load data in the form of a tensorflow data set, apply label noise, and return the
     train data and test data.
 
     Parameters
     ----------
-    data_set - str, name of data set to load from tf.keras.datasets
-    label_noise - float, percentage of training data to add noise to
-    augment_data - boolean, whether or not to use random cropping and horizontal flipping to augment training data
+    data_set: str
+        name of data set to load from tf.keras.datasets
+    label_noise: float
+        percentage of training data to add noise to
     """
 
     datasets = ["cifar10", "cifar100", "mnist"]
@@ -378,33 +394,7 @@ def load_data(data_set, label_noise, augment_data=False):
     )
     y_train, y_test = tf.cast(y_train, tf.float32), tf.cast(y_test, tf.float32)
 
-    # TODO: Add data augmentation.
-
     return (x_train, y_train), (x_test, y_test), list(image_shape)
-
-
-def augment_data_set(data_set, crop_dim=32, target_height=36, target_width=36):
-    """ Apply random cropping and random horizontal flip data augmentation as done in Deep Double Descent """
-
-    # random flip. Preserve original label
-    rand_flip = lambda image, label: (tf.image.random_flip_left_right(image), label)
-
-    # Random Crop. Preserve original label
-    def rand_crop(image, label):
-        offset_height = tf.random.uniform([], 0, 3, dtype=tf.int32)
-        offset_width = tf.random.uniform([], 0, 3, dtype=tf.int32)
-        image = tf.image.resize_with_crop_or_pad(image, target_height, target_width)
-        return (
-            tf.image.crop_to_bounding_box(
-                image, offset_height, offset_width, crop_dim, crop_dim
-            ),
-            label,
-        )
-
-    data_set_flip = data_set.map(rand_flip)
-    data_set_drop = data_set.map(rand_crop)
-
-    return {"flip": data_set_flip, "crop": data_set_drop}
 
 
 class Track_Weight_Change_onEpoch(tf.keras.callbacks.Callback):

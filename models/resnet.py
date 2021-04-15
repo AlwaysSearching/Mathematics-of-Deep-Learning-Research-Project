@@ -41,15 +41,15 @@ class ResNet(Model):
         """
         Parameters
         ----------
-            input_shape - list
+            input_shape: list
                 Input dimensions of image data
-            residual_block_params - dict
+            residual_block_params: dict
                 List of dict specifying # filters, # residual blocks, and stride for each residual block in the network.
                 e.g.
                     [{'n_filters': 16, 'block_depth':3, 'stride': 1}, {'n_filters': 32, 'block_depth':3, 'stride': 1}]
-            N_Classes - int
+            N_Classes: int
                 Output dimension of the final softmax layer.
-            init_channels - int
+            init_channels: int
                 Initial number of filters in the network prior to the Residual block layers.
             layer_initializer - tf.keras.initializers
                 Optional Initializer to pass to the network. Default initialization is Kaiming Uniform
@@ -130,16 +130,18 @@ class ResidualBlock(tf.keras.layers.Layer):
         """
         Parameters
         ----------
-            n_filters - int
+            n_filters: int
                 Width of the residual block. Number of channels for block convolutions.
-            stride - int
+            layer_initializer - tf.keras.initializers
+                Optional Initializer to pass to the network. Default initialization is Kaiming Uniform
+            stride: int
                 The stride used in the convolution layer. When 1 < stride, then the convolutions perform downsampling.
         """
 
         super(ResidualBlock, self).__init__()
 
         self._layer_init = (
-            layer_initializer if layer_initializer is not None else "he_normal"
+            layer_initializer if layer_initializer is not None else "he_uniform"
         )
 
         self.batch_norm_1 = BatchNormalization(momentum=0.9, epsilon=1e-5, renorm=True)
@@ -175,7 +177,7 @@ class ResidualBlock(tf.keras.layers.Layer):
                 )
             )
         else:
-            self.downsample = lambda x: x
+            self.downsample = None
 
     def call(self, inputs, training=None, **kwargs):
 
@@ -183,14 +185,14 @@ class ResidualBlock(tf.keras.layers.Layer):
         # Therefore we need to apply batch-norm and relu activation.
         x = self.batch_norm_1(inputs, training=training)
         x = tf.nn.relu(x)
-        residual = self.downsample(x)
+        shortcut = x if self.downsample is None else self.downsample(x)
 
         x = self.conv_1(inputs)
         x = self.batch_norm_2(x, training=training)
         x = tf.nn.relu(x)
 
         x = self.conv_2(x)
-        output = tf.keras.layers.add([residual, x])
+        output = tf.keras.layers.add([shortcut, x])
 
         # We do not apply relu and batch norm to the output, as the next
         # resnet block expects pre-activation values.
