@@ -8,6 +8,7 @@ from tensorflow.keras.layers import (
     AveragePooling2D,
     BatchNormalization,
 )
+
 from tensorflow.keras import Model, Sequential
 
 
@@ -81,7 +82,7 @@ class ResNet(Model):
         self.flatten = Flatten()
 
         # Linear output -> Use from_logits = True with Sparse Categorical Cross Entropy.
-        self.linear = Dense(units=n_classes)
+        self.linear = Dense(units=n_classes, kernel_initializer=self._layer_init)
 
     def _make_residual_block_layer(self, n_filters, block_depth, stride=1):
         # Define a sequential network which is composed of sequential residual blocks with the same # of filters
@@ -144,7 +145,7 @@ class ResidualBlock(tf.keras.layers.Layer):
             layer_initializer if layer_initializer is not None else "he_uniform"
         )
 
-        self.batch_norm_1 = BatchNormalization(momentum=0.9, epsilon=1e-5, renorm=True)
+        self.batch_norm_1 = BatchNormalization(momentum=0.9, epsilon=1e-5)
         self.conv_1 = Conv2D(
             filters=n_filters,
             kernel_size=(3, 3),
@@ -154,7 +155,7 @@ class ResidualBlock(tf.keras.layers.Layer):
             use_bias=False,
         )
 
-        self.batch_norm_2 = BatchNormalization(momentum=0.9, epsilon=1e-5, renorm=True)
+        self.batch_norm_2 = BatchNormalization(momentum=0.9, epsilon=1e-5)
         self.conv_2 = Conv2D(
             filters=n_filters,
             kernel_size=(3, 3),
