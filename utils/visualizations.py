@@ -152,7 +152,7 @@ def plot_loss_from_file(path):
         100 * (1 - optimal_early_train_accuracy),
         marker="o",
         markersize=mrkr_size,
-        label="Optimal Early Stopping Train Accuracy",
+        label="Optimal Early Stopping Train Error",
     )
     train_accy_plt.set_ylabel("Train Error", fontsize=16)
 
