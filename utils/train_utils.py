@@ -117,7 +117,7 @@ def train_conv_nets(
             # # some early experiments might have not specified from_logits=True
             # scaled_loss = "sparse_categorical_crossentropy"
             scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        elif scaled_loss_alpha=='1/m' or scaled_loss_alpha=='1/sqrtm':
+        elif scaled_loss_alpha=='1_m' or scaled_loss_alpha=='1_sqrtm':
             scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha, width)
         else:
             scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
@@ -280,7 +280,7 @@ def train_resnet18(
     for width in resnet_widths:
         if scaled_loss_alpha is None:
             scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        elif scaled_loss_alpha=='1/m' or scaled_loss_alpha=='1/sqrtm':
+        elif scaled_loss_alpha=='1_m' or scaled_loss_alpha=='1_sqrtm':
             scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha, width)
         else:
             scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
@@ -341,11 +341,11 @@ def get_scaled_sparse_categorical_loss(alpha=1, width=None):
     On Lazy Training in Differentiable Programming, Chizat et. al. 2020
     (https://arxiv.org/pdf/1812.07956.pdf)
     """
-    if alpha == '1/m' or alpha == '1/sqrtm':
+    if alpha == '1_m' or alpha == '1_sqrtm':
         if not width:
             raise Exception('width must be specified when using alpha proportional to width')
 
-        scaled_alpha = 1/width if alpha == '1/m' else 1/(width**0.5)
+        scaled_alpha = 1/width if alpha == '1_m' else 1/(width**0.5)
         def scaled_sparse_categorical_loss(y_actual, y_pred):
             sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
             scaled_sce = sce(y_actual, scaled_alpha * y_pred) / scaled_alpha ** 2
