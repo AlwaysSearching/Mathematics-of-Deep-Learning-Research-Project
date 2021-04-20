@@ -20,6 +20,7 @@ def train_conv_nets(
     label_noise_as_int=10,
     augment_data=False,
     scaled_loss_alpha=None,
+    layer_initializer=None,
     n_batch_steps=500_000,
     optimizer=None,
     save=True,
@@ -47,6 +48,8 @@ def train_conv_nets(
         Default value is set to false. Augmentation is applied  at train time.
     scaled_loss_alpha: float
         The alplha value used to scale the cross entropy loss used during training.
+    layer_initializer: tf.keras.initializers
+        Pass a specific initialization method to use in initializing model weights. default is He uniform.
     n_batch_steps: int
         number of gradient descent steps to take.
     save: bool
@@ -62,7 +65,7 @@ def train_conv_nets(
     """
 
     if scaled_loss_alpha is None:
-        scaled_loss = "sparse_categorical_crossentropy"
+        scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     else:
         scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
 
@@ -124,7 +127,7 @@ def train_conv_nets(
 
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(
-            image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes
+            image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes, layer_initializer=layer_initializer
         )
 
         conv_net.compile(
@@ -374,7 +377,7 @@ def load_data(data_set, label_noise):
     # load the data.
     (x_train, y_train), (x_test, y_test) = get_data.load_data()
     image_shape = x_train[0].shape
-
+    
     # apply label noise to the data set
     if 0 < label_noise:
         random_idx = np.random.choice(
