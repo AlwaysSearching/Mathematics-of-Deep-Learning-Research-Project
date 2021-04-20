@@ -46,8 +46,9 @@ def train_conv_nets(
     augment_data: bool
         Whether of not to apply random cropping and random left right flipping to the training data. 
         Default value is set to false. Augmentation is applied  at train time.
-    scaled_loss_alpha: float
-        The alplha value used to scale the cross entropy loss used during training.
+    scaled_loss_alpha: float or str
+        The alplha value used to scale the cross entropy loss used during training. If '1_m' or '1_sqrt_m' is passed
+        then alpha will be a function of the width parameter.
     layer_initializer: tf.keras.initializers
         Pass a specific initialization method to use in initializing model weights. default is He uniform.
     n_batch_steps: int
@@ -64,12 +65,6 @@ def train_conv_nets(
         over and overwriting it. 
     """
 
-    if scaled_loss_alpha is None:
-        scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    else:
-        scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
-
-    alpha = scaled_loss_alpha if scaled_loss_alpha is not None else 1
     label_noise = label_noise_as_int / 100
 
     # load the relevent dataset. Note that the training data is cast to tf.float32 and normalized by 255.
@@ -121,6 +116,15 @@ def train_conv_nets(
         pkl.dump(metrics, open(data_backup_path, "wb"))
 
     for width in convnet_widths:
+        if scaled_loss_alpha is None:
+            # # some early experiments might have not specified from_logits=True
+            # scaled_loss = "sparse_categorical_crossentropy"
+            scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        elif scaled_loss_alpha=='1_m' or scaled_loss_alpha=='1_sqrtm':
+            scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha, width)
+        else:
+            scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
+
         if load_saved_metrics and width in loaded_widths:
             print('width %d results already loaded from .pkl file, training skipped' %width)
             continue
@@ -224,11 +228,6 @@ def train_resnet18(
         over and overwriting it. 
     """
 
-    if scaled_loss_alpha is None:
-        scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    else:
-        scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
-
     alpha = scaled_loss_alpha if scaled_loss_alpha is not None else 1
     label_noise = label_noise_as_int / 100
 
@@ -282,6 +281,13 @@ def train_resnet18(
         pkl.dump(metrics, open(data_backup_path, "wb"))
 
     for width in resnet_widths:
+        if scaled_loss_alpha is None:
+            scaled_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        elif scaled_loss_alpha=='1_m' or scaled_loss_alpha=='1_sqrtm':
+            scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha, width)
+        else:
+            scaled_loss = get_scaled_sparse_categorical_loss(scaled_loss_alpha)
+
         if load_saved_metrics and width in loaded_widths:
             print('width %d results already loaded from .pkl file, training skipped' %width)
             continue
@@ -330,7 +336,7 @@ def train_resnet18(
     return metrics
 
 
-def get_scaled_sparse_categorical_loss(alpha=1):
+def get_scaled_sparse_categorical_loss(alpha=1, width=None):
     """
     Create a Custom Loss function which is equivalent to rescalling the initialization variance.
 
@@ -338,13 +344,26 @@ def get_scaled_sparse_categorical_loss(alpha=1):
     On Lazy Training in Differentiable Programming, Chizat et. al. 2020
     (https://arxiv.org/pdf/1812.07956.pdf)
     """
+    if alpha == '1_m' or alpha == '1_sqrtm':
+        if not width:
+            raise Exception('width must be specified when using alpha proportional to width')
 
-    def scaled_sparse_categorical_loss(y_actual, y_pred):
-        sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        scaled_sce = sce(y_actual, alpha * y_pred) / alpha ** 2
-        return scaled_sce
+        scaled_alpha = 1/width if alpha == '1_m' else 1/(width**0.5)
+        def scaled_sparse_categorical_loss(y_actual, y_pred):
+            sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+            scaled_sce = sce(y_actual, scaled_alpha * y_pred) / scaled_alpha ** 2
+            return scaled_sce     
 
-    return scaled_sparse_categorical_loss
+        return scaled_sparse_categorical_loss
+
+    else:         
+        const_alpha = alpha
+        def scaled_sparse_categorical_loss(y_actual, y_pred):
+            sce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+            scaled_sce = sce(y_actual, const_alpha * y_pred) / const_alpha ** 2
+            return scaled_sce
+
+        return scaled_sparse_categorical_loss
 
 
 def load_data(data_set, label_noise):
