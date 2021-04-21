@@ -20,6 +20,7 @@ def train_conv_nets(
     label_noise_as_int=10,
     augment_data=False,
     scaled_loss_alpha=None,
+    layer_initializer=None,
     n_batch_steps=500_000,
     optimizer=None,
     save=True,
@@ -45,8 +46,11 @@ def train_conv_nets(
     augment_data: bool
         Whether of not to apply random cropping and random left right flipping to the training data. 
         Default value is set to false. Augmentation is applied  at train time.
-    scaled_loss_alpha: float
-        The alplha value used to scale the cross entropy loss used during training.
+    scaled_loss_alpha: float or str
+        The alplha value used to scale the cross entropy loss used during training. If '1_m' or '1_sqrt_m' is passed
+        then alpha will be a function of the width parameter.
+    layer_initializer: tf.keras.initializers
+        Pass a specific initialization method to use in initializing model weights. default is He uniform.
     n_batch_steps: int
         number of gradient descent steps to take.
     save: bool
@@ -61,7 +65,6 @@ def train_conv_nets(
         over and overwriting it. 
     """
 
-    alpha = scaled_loss_alpha if scaled_loss_alpha is not None else 1
     label_noise = label_noise_as_int / 100
 
     # load the relevent dataset. Note that the training data is cast to tf.float32 and normalized by 255.
@@ -128,7 +131,7 @@ def train_conv_nets(
 
         # Depth 5 Conv Net using default Kaiming Uniform Initialization.
         conv_net, model_id = make_convNet(
-            image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes
+            image_shape, depth=convnet_depth, init_channels=width, n_classes=n_classes, layer_initializer=layer_initializer
         )
 
         conv_net.compile(
@@ -393,7 +396,7 @@ def load_data(data_set, label_noise):
     # load the data.
     (x_train, y_train), (x_test, y_test) = get_data.load_data()
     image_shape = x_train[0].shape
-
+    
     # apply label noise to the data set
     if 0 < label_noise:
         random_idx = np.random.choice(

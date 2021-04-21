@@ -785,7 +785,7 @@ def plot_weight_from_alpha_test(path,
         plt.savefig(save)
     plt.show()    
 
-def plot_loss_vs_epoch_from_file(path, x_idx, contour_levels=[0.1], save_fig=None):
+def plot_loss_vs_epoch_from_file(path, x_idx, contour_levels=[0.1], save_fig=None, scale='log'):
     """
     Plots the Seaplots as seen on page 2 of Deep Double Descent. Plots them in the form of 1 1x2 matplotlib figure.
 
@@ -847,7 +847,8 @@ def plot_loss_vs_epoch_from_file(path, x_idx, contour_levels=[0.1], save_fig=Non
     train_plot.set_xticklabels(x_labels, fontsize=16)
 
     # set y ticks and adjust scale
-    train_plot.set_yscale("symlog", linthresh=10)
+    if scale == 'log':
+        train_plot.set_yscale("symlog", linthresh=10)
     train_plot.set_yticks([i - 1 for i in [1, 10, 100, 1000]])
     train_plot.set_yticklabels([1, 10, 100, 1000], fontsize=12)
 
@@ -886,7 +887,8 @@ def plot_loss_vs_epoch_from_file(path, x_idx, contour_levels=[0.1], save_fig=Non
     test_plot.set_xticklabels(x_labels, fontsize=14)
 
     # set y ticks and adjust scale
-    test_plot.set_yscale("symlog", linthresh=10)
+    if scale == 'log':
+        test_plot.set_yscale("symlog", linthresh=10)
     test_plot.set_yticks([i - 1 for i in [1, 10, 100, 1000]])
     test_plot.set_yticklabels([1, 10, 100, 1000], fontsize=12)
 
